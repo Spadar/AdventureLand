@@ -41,7 +41,7 @@ setInterval(function()
 	{
 		recordKitePath();
 	}
-}, 5);
+}, 100);
 
 function recordKitePath()
 {
