@@ -1,38 +1,24 @@
-//HOW TO USE
-////Recording a Path:
-////1. Set 'recordPath' to 'true'
-////2. Start CODE
-////3. Walk desired Path in game.
-////4. When you arrive back at your starting point (shown by drawn lines) a JSON representation of the path will be shown.
-////5. use CTRL-A -> CTRL-C to copy the JSON Text.
-////6. Paste JSON as the value assigned in the function initializeKitePath
-
-////Following a Recorded Path
-////1. Make sure you set a path in initializeKitePath as shown above.
-////2. Set 'recordPath' to 'false'.
-////3. set 'followPath' to 'true'.
-
-////Notes:
-////If set target equal to the monster you're attempting to kite, your character will only continue along the path if the target is within your attack range.
-
 clear_drawings();
-var target;//Target Monster
+
+var target = get_target();
+
 var recordPath = false;
 var followPath = true;
 var finishedRecording = false;
 
 var kitePath = [];
 
-if(!recordPath)
-{
-	initializeKitePath();
-}
+initializeKitePath();
 
-var targetIndex = findNearestPathPoint();
+var targetIndex = findNearestPathPoint(character.real_x, character.real_y);
+
+var kiteDirection = 1;
+
 drawPath();
 
 setInterval(function()
 {
+	getKiteDirection();
 	if(!recordPath && followPath && kitePath.length > 0)
 	{
 		followKitePath();
@@ -52,7 +38,7 @@ function recordKitePath()
 		lastPoint = kitePath[kitePath.length - 1];
 	}
 	
-	if(lastPoint == null || distanceToPoint(lastPoint.x, lastPoint.y) > 25)
+	if(lastPoint == null || distanceToPoint(character.real_x, character.real_y, lastPoint.x, lastPoint.y) > 50)
 	{
 		var newPoint = {x: character.real_x, y: character.real_y};
 		
@@ -64,7 +50,7 @@ function recordKitePath()
 		kitePath.push(newPoint);
 	}
 	
-	if(kitePath.length > 2 && distanceToPoint(kitePath[0].x, kitePath[0].y) < 25)
+	if(kitePath.length > 2 && distanceToPoint(character.real_x, character.real_y, kitePath[0].x, kitePath[0].y) < 50)
 	{
 		if(!finishedRecording)
 		{
@@ -95,8 +81,7 @@ function drawPath()
 	}
 }
 
-//Returns the index of the nearest point in our path.
-function findNearestPathPoint()
+function findNearestPathPoint(x, y)
 {
 	var closestPoint;
 	var closestPointDist;
@@ -105,7 +90,7 @@ function findNearestPathPoint()
 	for(var i = 0; i < kitePath.length; i++)
 	{
 		var point = kitePath[i];
-		var pointDist = distanceToPoint(point.x, point.y);
+		var pointDist = distanceToPoint(x, y, point.x, point.y);
 		if(closestPoint == null || pointDist < closestPointDist)
 		{
 			closestPoint = point;
@@ -117,9 +102,9 @@ function findNearestPathPoint()
 	return closestIndex;
 }
 
-function distanceToPoint(x, y)
+function distanceToPoint(x1, y1, x2, y2)
 {
-	return Math.sqrt(Math.pow(character.real_x - x, 2) + Math.pow(character.real_y - y, 2));
+	return Math.sqrt(Math.pow(x1 - x2, 2) + 							Math.pow(y1 - y2, 2));
 }
 
 
@@ -128,27 +113,54 @@ function followKitePath()
 	var targetDistance;
 	if(target != null)
 	{
-		targetDistance = distanceToPoint(target.real_x, target.real_y);
+		targetDistance = distanceToPoint(character.real_x, character.real_y, target.real_x, target.real_y);
 	}
 			
 	if ((target == null || target.target != character.name) || targetDistance < character.range)
 	{
-	
+		
+		
 		var targetPoint = kitePath[targetIndex];
-
-		if(distanceToPoint(targetPoint.x, targetPoint.y) < 10)
+		if(distanceToPoint(character.real_x, character.real_y, targetPoint.x, targetPoint.y) < 25)
 		{
-			targetIndex = targetIndex + 1;
+			kiteDirection = getKiteDirection();
+			targetIndex = targetIndex + kiteDirection;
 			if(targetIndex > kitePath.length - 1)
 			{
 				targetIndex = 0;
 			}
+			
+			if(targetIndex < 0)
+			{
+				targetIndex = kitePath.length - 1;
+			}
+			
 			targetPoint = kitePath[targetIndex];
 		}
-		move(
-			character.real_x+(targetPoint.x-character.real_x),
-			character.real_y+(targetPoint.y-character.real_y)
-		);
+		
+		var distToEnemy;
+		
+		if(target != null)
+		{ 
+			distToEnemy = distanceToPoint(character.real_x, character.real_y, target.real_x, target.real_y);
+		}
+		
+		if((target == null || distToEnemy < character.range) || !can_move_to(target.real_x, target.real_y))
+		{
+			move(
+				character.real_x+(targetPoint.x-character.real_x),
+				character.real_y+(targetPoint.y-character.real_y)
+			);
+		}
+		else
+		{
+			
+			targetIndex = findNearestPathPoint(character.real_x, character.real_y);
+			move(
+				character.real_x+(target.real_x-character.real_x),
+				character.real_y+(target.real_y-character.real_y)
+			);
+		}
 	}
 	else
 	{
@@ -156,7 +168,62 @@ function followKitePath()
 	}
 }
 
-//Paste path JSON here
+function offsetToPoint(x, y)
+{
+	var angle = angleToPoint(x, y) + Math.PI;
+	
+	return angle - characterAngle();
+	
+}
+
+function characterAngle()
+{
+	return (character.angle * Math.PI)/180;
+}
+
+function angleToPoint(x, y)
+{
+	var deltaX = character.real_x - x;
+	var deltaY = character.real_y - y;
+	
+	return Math.atan2(deltaY, deltaX);
+}
+
+function getKiteDirection()
+{
+	if(target != null)
+	{
+		var nextNode = targetIndex + 1;
+		
+		var previousNode = targetIndex - 1;
+		
+		if(nextNode > kitePath.length - 1)
+		{
+			nextNode = 0;
+		}
+		
+		if(previousNode < 0)
+		{
+			previousNode = kitePath.length - 1;
+		}
+		
+		var nextDist = distanceToPoint(kitePath[nextNode].x, kitePath[nextNode].y, target.real_x, target.real_y);
+		
+		var prevDist = distanceToPoint(kitePath[previousNode].x, kitePath[previousNode].y, target.real_x, target.real_y);
+		
+		if(nextDist > prevDist)
+		{
+			return 1;
+		}
+		else
+		{
+			return -1;
+		}
+	}
+	
+	return kiteDirection;
+}
+
 function initializeKitePath()
 {
 	kitePath = [];
