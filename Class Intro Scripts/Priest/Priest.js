@@ -1,6 +1,6 @@
 game_log("---Script Start---");
 //Put monsters you want to kill in here
-var monsterTargets = ["goo"];
+var monster_targets = ["goo"];
 
 //Movement And Attacking
 setInterval(function () {
@@ -79,7 +79,7 @@ function find_viable_targets() {
                 && (mob.type == "monster"
                     && (parent.party_list.includes(mob.target)
                         || mob.target == character.name))
-                    || monsterTargets.includes(mob.mtype));
+                    || monster_targets.includes(mob.mtype));
 
     for (id in monsters) {
         var monster = monsters[id];
