@@ -45,25 +45,17 @@ function pvptrackerhitHandler(event)
 {
 	if(parent != null)
 	{
-		var attacker = event.hid;
-		var attacked = event.id;
-
-		var attackedEntity = parent.entities[attacked];
-
-		if(attackedEntity != null)
+		if(attackedEntity.type == "character" && event.heal == null)
 		{
-			if(attackedEntity.type == "character" && event.heal == null)
-			{
-				var logEntry = {};
-				logEntry.Attacker = event.hid;
-				logEntry.Defender = event.id;
-				logEntry.Animation = event.anim;
-				logEntry.Damage = event.damage;
-				logEntry.Time = new Date();
+			var logEntry = {};
+			logEntry.Attacker = event.hid;
+			logEntry.Defender = event.id;
+			logEntry.Animation = event.anim;
+			logEntry.Damage = event.damage;
+			logEntry.Time = new Date();
 				
-				curLog.push(logEntry);
-				savePvPTrackerLog();
-			}
+			curLog.push(logEntry);
+			savePvPTrackerLog();
 		}
 	}
 }
