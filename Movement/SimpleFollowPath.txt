@@ -1,0 +1,30 @@
+var points = [{x: 0, y: 0}, {x: 0, y: 100}, {x: 100, y: 100}, {x: 100, y: 0}];
+
+var pointIndex = 0;
+
+function walkPath()
+{
+	var point = points[pointIndex];
+	
+	if(!character.moving)
+	{
+		move(point.x, point.y);
+	}
+	
+	var distance = simple_distance({x: character.real_x, y: character.real_y}, point);
+	
+	if(distance < 10)
+	{
+		pointIndex++;
+		
+		if(pointIndex > points.length - 1)
+		{
+			pointIndex = 0;
+		}
+	}
+}
+
+setInterval(function()
+			{
+	walkPath();
+}, 100);

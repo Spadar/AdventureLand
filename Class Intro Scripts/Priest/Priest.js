@@ -67,7 +67,7 @@ function farm()
 {
     var lowest_health = lowest_health_partymember();
     //If we have a target to heal, heal them. Otherwise attack a target.
-    if (lowest_health.health < 0.75) {
+    if (lowest_health != null && lowest_health.health < 0.75) {
         if (distance_to_point(lowest_health.real_x, lowest_health.real_y) < character.range) {
             heal(lowest_health);
         }
