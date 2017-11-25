@@ -276,15 +276,12 @@ function lowest_health_partymember() {
                 }
             });
     }
-    else {
-        //Player is not in a party
-        party.push(
-        {
-            name: character.name,
-            entity: character
-        });
-    }
-
+	//Add Self to Party Array
+	party.push(
+    {
+        name: character.name,
+        entity: character
+    });
     //Populate health percentages
     for (id in party) {
         var member = party[id];
