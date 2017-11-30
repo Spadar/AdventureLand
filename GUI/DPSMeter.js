@@ -1,3 +1,5 @@
+//Original Base for GUI Layout From: https://github.com/JourneyOver/Adventure_Land_Codes/blob/master/Code%20Snippits/GUI%20Additions/Estimated%20Time%20Until%20Level%20Up%20GUI.js
+
 //Running window in milliseconds of how long to track hits for. Any hits outside of this window are removed.
 var dpsInterval = 10000;
 var damageLog = [];
