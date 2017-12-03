@@ -68,7 +68,7 @@ function farm()
     var lowest_health = lowest_health_partymember();
 	
     //If we have a target to heal, heal them. Otherwise attack a target.
-    if (lowest_health != null && lowest_health.healthRatio < 0.8) {
+    if (lowest_health != null && lowest_health.health_ratio < 0.8) {
         if (distance_to_point(lowest_health.real_x, lowest_health.real_y) < character.range) {
             heal(lowest_health);
         }
@@ -300,16 +300,16 @@ function lowest_health_partymember() {
     for (id in party) {
         var member = party[id];
         if (member.entity != null) {
-            member.entity.healthRatio = member.entity.hp / member.entity.max_hp;
+            member.entity.health_ratio = member.entity.hp / member.entity.max_hp;
         }
         else {
-            member.healthRatio = 1;
+            member.health_ratio = 1;
         }
     }
 	
     //Order our party array by health percentage
     party.sort(function (current, next) {
-        return current.entity.healthRatio - member.entity.healthRatio;
+        return current.entity.health_ratio - member.entity.health_ratio;
     });
 	
 
