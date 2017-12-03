@@ -66,7 +66,7 @@ function state_controller()
 function farm()
 {
     var lowest_health = lowest_health_partymember();
-	game_log(lowest_health.healthRatio);
+	
     //If we have a target to heal, heal them. Otherwise attack a target.
     if (lowest_health != null && lowest_health.healthRatio < 0.8) {
         if (distance_to_point(lowest_health.real_x, lowest_health.real_y) < character.range) {
@@ -307,14 +307,11 @@ function lowest_health_partymember() {
         }
     }
 	
-	console.log(party);
-	
     //Order our party array by health percentage
     party.sort(function (current, next) {
         return current.entity.healthRatio - member.entity.healthRatio;
     });
 	
-	console.log(party);
 
     //Return the lowest health
     return party[0].entity;
