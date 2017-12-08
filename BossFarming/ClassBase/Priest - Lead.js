@@ -154,10 +154,6 @@ setInterval(function(){
 	}
 }, 250);
 
-if (startTarget != null && startTarget.mtype != null) {
-    mobTargets.unshift(startTarget.mtype);
-}
-
 function findLowestHPPartyMember() {
     if (character.party == null) {
         return null;
