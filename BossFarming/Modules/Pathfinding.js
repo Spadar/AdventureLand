@@ -3,7 +3,7 @@ if(parent.ModulesLoaded == null)
 	parent.ModulesLoaded = [];
 }
 
-parent.ModulesLoaded.push("PathfindingDoorPrototype");
+parent.ModulesLoaded.push("Pathfinding");
 
 load_code("PathfindingLibrary");
 
