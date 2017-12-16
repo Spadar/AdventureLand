@@ -75,6 +75,18 @@ setInterval(function()
 			}
 		}
 	}
+	else
+	{
+		//If we're not searching and we don't know where the snowman is, go somewhere safe and wait.
+		if(!searching)
+		{
+			if((character.map != "main" || simple_distance({x: character.real_x, y: character.real_y}, {x: 0, y: 0}) > 100) 
+				&& !smart.moving)
+			{
+				smart_move({x: 0, y: 0, map: "main"});
+			}
+		}
+	}
 }, 250);
 
 //Listen for the death of the event monster, stop searching afterwards.
