@@ -141,7 +141,7 @@ function find_monster_spawns(map)
 {
 	var map = parent.G.maps[map];
     var monsters = map.monsters;
-    var mapSpawns = []
+    var map_spawns = []
 
 
     for (id in monsters) 
@@ -155,7 +155,7 @@ function find_monster_spawns(map)
 												 monster.boundary[2],
 												 monster.boundary[3]);
 			}
-			mapSpawns.push(monster);
+			map_spawns.push(monster);
 		}
 		else 
 		{
@@ -170,18 +170,18 @@ function find_monster_spawns(map)
 											   boundary[3],
 											   boundary[4]);
 
-				mapSpawns.push(spawn);
+				map_spawns.push(spawn);
 			}
 		}
 	}
 			
-    return mapSpawns;
+    return map_spawns;
 }
 
 //Calculate the midpoint of a rectangle.
 function find_box_center(x1, y1, x2, y2) {
-    var midX = (x1 + x2) / 2;
-    var midY = (y1 + y2) / 2;
+    var mid_x = (x1 + x2) / 2;
+    var mid_y = (y1 + y2) / 2;
 
-    return { x: midX, y: midY };
+    return { x: mid_x, y: mid_y };
 }
