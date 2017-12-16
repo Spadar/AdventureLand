@@ -18,6 +18,8 @@ var searching;
 //Holds the event mob entity if we find it.
 var target;
 
+on_game_event({name: "snowman", map: "cave"});
+
 setInterval(function()
 {
 	//Don't die!
@@ -107,6 +109,7 @@ function clear_search()
 {
 	event_map = null;
 	event_spawns = null;
+	searching = false;
 }
 
 //Listen for event monster spawn, begin search when it does.
