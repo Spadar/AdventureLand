@@ -18,8 +18,6 @@ var searching;
 //Holds the event mob entity if we find it.
 var target;
 
-on_game_event({name: "snowman", map: "cave"});
-
 setInterval(function()
 {
 	//Don't die!
