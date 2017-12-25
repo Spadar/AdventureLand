@@ -1,8 +1,6 @@
 //The items we want to craft.
 var craftList = ["wingedboots"];
 
-//Loop attempted crafting.
-//This will make it do one craft, or one buy, every 500ms. 
 setInterval(function()
 			{
 	tryCraft();
@@ -19,11 +17,13 @@ function tryCraft()
 		//Grab the crafting recipe.
 		var craftDef = parent.G.craft[craftName];
 		
+		var cost = craftDef.cost;
+		
 		//Did we find a recipe?
 		if(craftDef != null)
 		{
 			//Yeah? Do we have enough to pay for the recipe?
-			if(craftDef.cost < character.gold)
+			if(cost < character.gold)
 			{
 				//Variable to track how many items we're missing from the recipe.
 				var missing = 0;
@@ -74,7 +74,7 @@ function tryCraft()
 						if(basics.items.includes(itemName))
 						{
 							//Do we have enough to complete the crafting with the cost of the item included?
-							craftDef.cost += item.g;
+							cost += item.g;
 							
 							if(craftDef.cost < character.gold)
 							{
@@ -101,7 +101,6 @@ function tryCraft()
 						}
 						else
 						{
-							//Not enough, mark as missing.
 							missing++;
 						}
 					}
