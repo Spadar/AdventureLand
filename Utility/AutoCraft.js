@@ -99,6 +99,11 @@ function tryCraft()
 							//Yeah? Then we'll mark it for use.
 							craftSlots.push(itemSearch);
 						}
+						else
+						{
+							//Not enough, mark as missing.
+							missing++;
+						}
 					}
 				}
 				
