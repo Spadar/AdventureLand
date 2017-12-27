@@ -1,6 +1,14 @@
 //The mtype of the event mob we want to kill.
 var event_mob_name = "snowman";
 
+//Foaly reports the snowmans location to everyone if he finds it, this lets us know we want to listen for it.
+var scout_name = "Foaly";
+
+var farm_types = ["osnake", "snake"];
+
+var home_location = {x: -471, y: -692, map: "halloween"};
+
+
 //The following variables are assigned while the script is running. 
 
 //The map the event mob spawned on
@@ -14,6 +22,8 @@ var event_spawns_index;
 
 //Whether we're searching for the event mob or not.
 var searching;
+
+var responding;
 
 //Holds the event mob entity if we find it.
 var target;
@@ -41,53 +51,80 @@ setInterval(function()
 		}
 		else
 		{
-			//Can we attack it?
-			if(!in_attack_range(target))
-			{
-				//No? Get over there!
-				
-				//Can we walk straight to it?
-				if(can_move_to(target.real_x, target.real_y))
-				{
-					//Good!
-					move(
-						character.real_x+(target.real_x-character.real_x)/2,
-						character.real_y+(target.real_y-character.real_y)/2
-					);
-				}
-				else
-				{
-					//Find a way to it!
-					if(!smart.moving)
-					{
-						smart_move({x: target.real_x, y: target.real_y, map: character.map});
-					}
-				}
-			}
-			else
-			{
-				//Are we able to fire off an attack?
-				if(can_attack(target))
-				{
-					//Kill it!
-					attack(target);
-				}
-			}
+			move_or_attack(target)
 		}
 	}
 	else
 	{
 		//If we're not searching and we don't know where the snowman is, go somewhere safe and wait.
-		if(!searching)
+		if(!searching && !responding)
 		{
-			if((character.map != "main" || simple_distance({x: character.real_x, y: character.real_y}, {x: 0, y: 0}) > 100) 
+			if((character.map != home_location.map || simple_distance({x: character.real_x, y: character.real_y}, {x: home_location.x, y: home_location.y}) > 300) 
 				&& !smart.moving)
 			{
-				smart_move({x: 0, y: 0, map: "main"});
+				smart_move({x: home_location.x, y: home_location.y, map: home_location.map});
+			}
+			else
+			{
+				if(target == null)
+				{
+					for(type in farm_types)
+					{
+						var mtype = farm_types[type];
+
+						var nearest = get_nearest_monster({type: mtype, path_check: true});
+
+						if(nearest != null)
+						{
+							target = nearest;
+							break;
+						}
+					}
+				}
+				
+				if(target != null)
+				{
+					move_or_attack(target)
+				}
 			}
 		}
 	}
 }, 250);
+
+function move_or_attack(target)
+{
+	if(!in_attack_range(target))
+	{
+		//No? Get over there!
+
+		//Can we walk straight to it?
+		if(can_move_to(target.real_x, target.real_y))
+		{
+			//Good!
+			move(
+				character.real_x+(target.real_x-character.real_x)/2,
+				character.real_y+(target.real_y-character.real_y)/2
+			);
+		}
+		else
+		{
+			//Find a way to it!
+			if(!smart.moving)
+			{
+				smart_move({x: target.real_x, y: target.real_y, map: character.map});
+			}
+		}
+	}
+	else
+	{
+		//Are we able to fire off an attack?
+		if(can_attack(target))
+		{
+			//Kill it!
+			attack(target);
+		}
+	}
+}
 
 //Listen for the death of the event monster, stop searching afterwards.
 function on_disappear(entity, data)
@@ -108,6 +145,7 @@ function clear_search()
 	event_map = null;
 	event_spawns = null;
 	searching = false;
+	responding = false;
 }
 
 //Listen for event monster spawn, begin search when it does.
@@ -189,6 +227,21 @@ function find_monster_spawns(map)
 	}
 			
     return map_spawns;
+}
+
+//Listen for scouted report on snowman
+function on_cm(name, data)
+{
+	if(name == scout_name)
+	{
+		if(data.name == "assistance_request" && data.mtype == event_mob_name)
+		{
+			game_log(scout_name + " found the " + event_mob_name + " moving to reported location.");
+			responding = true;
+			stop();
+			smart_move({x: data.x, y: data.y, map: data.map}, function(){responding = false;});
+		}
+	}
 }
 
 //Calculate the midpoint of a rectangle.
