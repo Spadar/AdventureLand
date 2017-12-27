@@ -4,8 +4,10 @@ var event_mob_name = "snowman";
 //Foaly reports the snowmans location to everyone if he finds it, this lets us know we want to listen for it.
 var scout_name = "Foaly";
 
+//What monsters do we want to farm in between snowman spawns?
 var farm_types = ["osnake", "snake"];
 
+//Where do we want to go in between snowman spawns?
 var home_location = {x: -471, y: -692, map: "halloween"};
 
 
@@ -91,6 +93,7 @@ setInterval(function()
 	}
 }, 250);
 
+//Function for either attacking or moving to attack
 function move_or_attack(target)
 {
 	if(!in_attack_range(target))
