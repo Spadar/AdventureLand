@@ -28,10 +28,13 @@ function on_draw()
 		
 		if(parent.miniMap.length == 0)
 		{
+			e=new PIXI.Graphics();
 			DrawMiniMap();
 			DrawWalls();
 			DrawEntities();
 			DrawCharacter();
+			parent.stage.addChild(e);
+			parent.miniMap.push(e);
 		}
 	}
 }
@@ -146,14 +149,11 @@ function DrawLine(point1, point2)
 {
 	var color=0x47474F;
 	var size=3;
-	e=new PIXI.Graphics();
 	e.lineStyle(size, color);
 	e.moveTo(point1.x + mapOrigin.x,point1.y + mapOrigin.y);
 	e.lineTo(point2.x + mapOrigin.x,point2.y + mapOrigin.y);
 	e.endFill();
-	parent.stage.addChild(e); 
 	e.zOrder = -99;
-	parent.miniMap.push(e);
 }
 
 //Draws the background and outer rim of the mini map
@@ -162,14 +162,11 @@ function DrawMiniMap()
 	var localPosition = WorldToLocal(mapOrigin.x, mapOrigin.y, 1);
 	var color=0x47474F;
 	var size= miniMapBorder;
-	e=new PIXI.Graphics();
 	e.lineStyle(size, color);
 	e.beginFill(0x40420);
 	e.drawCircle(mapOrigin.x, mapOrigin.y, miniMapRadius);
 	e.endFill();
-    parent.stage.addChild(e)
 	e.zOrder = -99;
-	parent.miniMap.push(e);
 }
 
 //Draws your character at the center of the mini map
@@ -177,14 +174,11 @@ function DrawCharacter()
 {
 	var color=0xFFFFFF;
 	var size=2;
-	e=new PIXI.Graphics();
 	e.lineStyle(size, color);
 	e.beginFill(color);
 	e.drawCircle(mapOrigin.x, mapOrigin.y, 2);
 	e.endFill();
-	parent.stage.addChild(e)
 	e.zOrder = -99;
-	parent.miniMap.push(e);
 }
 
 //Draws all entities in parent.entities on the mini map
@@ -200,14 +194,11 @@ function DrawEntities()
 		{
 			var color=EntityColorMapping(entity);
 			var size=2;
-			e=new PIXI.Graphics();
 			e.lineStyle(size, color);
 			e.beginFill(color);
 			e.drawCircle(localPos.x + mapOrigin.x, localPos.y + mapOrigin.y, 2);
 			e.endFill();
-			parent.stage.addChild(e)
 			e.zOrder = -99;
-			parent.miniMap.push(e);
 		}
 		
 	}
@@ -310,11 +301,12 @@ function getIntersections(a, b, c) {
 }
 
 // BASIC GEOMETRIC functions
-function distance(a,b) {
-	return Math.sqrt( Math.pow(a[0]-b[0], 2) + Math.pow(a[1]-b[1], 2) )
-}
 function is_on(a, b, c) {
-	return distance(a,c) + distance(c,b) == distance(a,b);
+	return intersect_distance(a,c) + intersect_distance(c,b) == intersect_distance(a,b);
+}
+
+function intersect_distance(a,b) {
+    return Math.sqrt( Math.pow(a[0]-b[0], 2) + Math.pow(a[1]-b[1], 2) )
 }
 
 function getAngles(a, b, c) {
