@@ -149,7 +149,7 @@ function DrawWall(point1, point2)
 function DrawLine(point1, point2)
 {
 	var color=0x47474F;
-	var size=3;
+	var size=1;
 	e.lineStyle(size, color);
 	e.moveTo(point1.x + mapOrigin.x,point1.y + mapOrigin.y);
 	e.lineTo(point2.x + mapOrigin.x,point2.y + mapOrigin.y);
@@ -194,10 +194,19 @@ function DrawEntities()
 		if(miniMapDistance(localPos.x, localPos.y) < miniMapRadius - miniMapBorder)
 		{
 			var color=EntityColorMapping(entity);
+			var fill = color;
 			var size=2;
-			e.lineStyle(size, color);
-			e.beginFill(color);
-			e.drawCircle(localPos.x + mapOrigin.x, localPos.y + mapOrigin.y, 2);
+			var borderSize = 2;
+			if(entity.mtype != null && (parent.G.monsters[entity.mtype].respawn == -1 || parent.G.monsters[entity.mtype].respawn > 60*2))
+			{
+				size = 5;
+				fill = 0x40420;
+			}
+			
+			
+			e.lineStyle(borderSize, color);
+			e.beginFill(fill);
+			e.drawCircle(localPos.x + mapOrigin.x, localPos.y + mapOrigin.y, size);
 			e.endFill();
 			e.zOrder = -99;
 		}
@@ -248,9 +257,13 @@ function EntityColorMapping(entity)
 	{
 		case 'character':
 		{
-			if(entity.npc == null)
+			if(parent.party_list.includes(entity.id))
 			{
 				return 0x1BD545;
+			}
+			else if(entity.npc == null)
+			{
+				return 0xDCE20F;
 			}
 			else
 			{
