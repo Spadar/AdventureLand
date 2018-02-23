@@ -32,6 +32,7 @@ function on_draw()
 			DrawMiniMap();
 			DrawWalls();
 			DrawEntities();
+			DrawNPCs();
 			DrawCharacter();
 			parent.stage.addChild(e);
 			parent.miniMap.push(e);
@@ -199,6 +200,42 @@ function DrawEntities()
 			e.drawCircle(localPos.x + mapOrigin.x, localPos.y + mapOrigin.y, 2);
 			e.endFill();
 			e.zOrder = -99;
+		}
+		
+	}
+}
+
+//Draws all entities in parent.entities on the mini map
+function DrawNPCs()
+{
+	for(id in parent.G.maps[character.map].npcs)
+	{
+		var npc = parent.G.maps[character.map].npcs[id];
+		
+		if(npc && !npc.loop && !npc.manual && npc.position)
+		{
+		var position = npc.position;
+		
+		if(position[0].length != null)
+		{
+			position = position[0];
+		}
+		
+		if(position[0] != 0 && position[1] != 0)
+		{
+			var localPos = WorldToLocal(position[0], position[1], scale);
+
+			if(miniMapDistance(localPos.x, localPos.y) < miniMapRadius - miniMapBorder)
+			{
+				var color=0x2341DB;
+				var size=2;
+				e.lineStyle(size, color);
+				e.beginFill(color);
+				e.drawCircle(localPos.x + mapOrigin.x, localPos.y + mapOrigin.y, 2);
+				e.endFill();
+				e.zOrder = -99;
+			}
+		}
 		}
 		
 	}
