@@ -7,6 +7,13 @@ var calcRadius = 150;
 //What types of monsters we want to try to avoid
 var avoidTypes = ["mole"];
 
+var avoidPlayers = true;//Set to false to not avoid players at all
+var playerBuffer = 30;//Additional Range around players
+var avoidPlayersWhitelist = [];//Players want to avoid differently
+var avoidPlayersWhitelistRange = 30; //Set to null here to not avoid whitelisted players
+var playerRangeOverride = 65; //Overrides how far to avoid, set to null to use player range.
+var playerAvoidIgnoreClasses = ["merchant"];//Classes we don't want to try to avoid
+
 //Tracking when we send movements to avoid flooding the socket and getting DC'd
 var lastMove;
 
@@ -113,7 +120,7 @@ function avoidMobs(goal)
 				for(id in monstersInRadius)
 				{
 					var entity = monstersInRadius[id];
-					var monsterRange = parent.G.monsters[entity.mtype].range + rangeBuffer;
+					var monsterRange = getRange(entity);
 
 					var distToMonster = distanceToPoint(position.x, position.y, entity.real_x, entity.real_y);
 
@@ -183,12 +190,40 @@ function avoidMobs(goal)
 	
 }
 
+function getRange(entity)
+{
+	var monsterRange;
+			
+	if(entity.type != "character")
+	{
+			
+		monsterRange = parent.G.monsters[entity.mtype].range + rangeBuffer;
+	}
+	else
+	{
+		if(avoidPlayersWhitelist.includes(entity.id) && avoidPlayersWhitelistRange != null)
+		{
+			monsterRange = avoidPlayersWhitelistRange;
+		}
+		else if(playerRangeOverride != null)
+		{
+			monsterRange = playerRangeOverride + playerBuffer;
+		}
+		else
+		{
+			monsterRange = entity.range + playerBuffer;
+		}
+	}
+	
+	return monsterRange;
+}
+
 function isInAttackRange(monstersInRadius)
 {
 	for(id in monstersInRadius)
 	{
 		var monster = monstersInRadius[id];
-		var monsterRange = parent.G.monsters[monster.mtype].range + rangeBuffer;
+		var monsterRange = getRange(monster);
 		
 		var charDistToMonster = distanceToPoint(character.real_x, character.real_y, monster.real_x, monster.real_y);
 		
@@ -229,8 +264,8 @@ function getAnglesToAvoid(monstersInRadius)
 		for(id in monstersInRadius)
 		{
 			var monster = monstersInRadius[id];
-
-			var monsterRange = parent.G.monsters[monster.mtype].range + rangeBuffer;
+			
+			var monsterRange = getRange(monster);
 			
 			var tangents = findTangents({x: character.real_x, y: character.real_y}, {x: monster.real_x, y: monster.real_y, radius: monsterRange});
 			
@@ -272,16 +307,29 @@ function getMonstersInRadius()
 	for(id in parent.entities)
 	{
 		var entity = parent.entities[id];
+		var distanceToEntity = distanceToPoint(entity.real_x, entity.real_y, character.real_x, character.real_y);
+		
+		var range = getRange(entity);
 		
 		if(entity.type === "monster" && avoidTypes.includes(entity.mtype))
 		{
-			var distanceToEntity = distanceToPoint(entity.real_x, entity.real_y, character.real_x, character.real_y);
 			
-			var monsterRange = parent.G.monsters[entity.mtype].range;
+			var monsterRange = getRange(entity);
 
 			if(distanceToEntity < calcRadius)
 			{
 				monstersInRadius.push(entity);
+			}
+		}
+		else
+		{
+			if(avoidPlayers && entity.type === "character" && !entity.npc && !playerAvoidIgnoreClasses.includes(entity.ctype))
+			{
+				if(!avoidPlayersWhitelist.includes(entity.id) || avoidPlayersWhitelistRange != null)
+				{
+					if(distanceToEntity < calcRadius || distanceToEntity < range)
+					monstersInRadius.push(entity);
+				}
 			}
 		}
 	}
