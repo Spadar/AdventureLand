@@ -2,10 +2,15 @@
 var rangeBuffer = 45;
 
 //How far away we want to consider monsters for
-var calcRadius = 150;
+var calcRadius = character.range;
 
 //What types of monsters we want to try to avoid
-var avoidTypes = ["mole"];
+var avoidTypes = ["mole", "bigbird"];
+
+if(character.range > parent.G.monsters["phoenix"].range)
+{
+	avoidTypes.push("phoenix");
+}
 
 //Tracking when we send movements to avoid flooding the socket and getting DC'd
 var lastMove;
@@ -13,7 +18,7 @@ var lastMove;
 //Whether we want to draw the various calculations done visually
 var drawDebug = true;
 
-var farmMaps = ["cave", 'tunnel', 'main', 'halloween'];
+var farmMaps = ['cave', 'tunnel', 'main', 'halloween'];
 
 var currentMapIndex = 0;
 var currentSpawnIndex = 0;
@@ -35,7 +40,7 @@ setInterval(function()
 	var spawns = findMonsterSpawns("phoenix");
 	
 	var spawnMap = spawns[targetMap];
-
+	
 	if(spawnMap != null)
 	{
 		targetSpawn = spawnMap[currentSpawnIndex];
@@ -58,7 +63,9 @@ setInterval(function()
 		
 		if(entity.mtype == "phoenix")
 		{
-			goal = {x: entity.real_x, y: entity.real_y};
+			//goal = {x: entity.real_x, y: entity.real_y};
+			goal = {x: character.real_x+(entity.real_x-character.real_x)/10,
+					y: character.real_y+(entity.real_y-character.real_y)/10};
 			found = true;
 			phoenix = entity;
 			break;
@@ -87,8 +94,13 @@ setInterval(function()
 		}
 	}
 				
-	if(!avoiding && goal != null && !smart.moving)
+	if(!avoiding && goal != null)
 	{
+		if(smart.moving)
+		{
+			stop();
+		}
+		
 		if(lastMove == null || new Date() - lastMove > 100)
 		{
 			move(goal.x, goal.y);
@@ -260,6 +272,11 @@ function avoidMobs(goal)
 					var entity = monstersInRadius[id];
 					var monsterRange = parent.G.monsters[entity.mtype].range + rangeBuffer;
 
+					if(entity.mtype == "phoenix")
+					{
+						monsterRange = character.range - 15;
+					}
+					
 					var distToMonster = distanceToPoint(position.x, position.y, entity.real_x, entity.real_y);
 
 					var charDistToMonster = distanceToPoint(character.real_x, character.real_y, entity.real_x, entity.real_y);
@@ -335,6 +352,11 @@ function isInAttackRange(monstersInRadius)
 		var monster = monstersInRadius[id];
 		var monsterRange = parent.G.monsters[monster.mtype].range + rangeBuffer;
 		
+		if(monster.mtype == "phoenix")
+		{
+			monsterRange = character.range - 15;
+		}
+		
 		var charDistToMonster = distanceToPoint(character.real_x, character.real_y, monster.real_x, monster.real_y);
 		
 		if(charDistToMonster < monsterRange)
@@ -376,6 +398,11 @@ function getAnglesToAvoid(monstersInRadius)
 			var monster = monstersInRadius[id];
 
 			var monsterRange = parent.G.monsters[monster.mtype].range + rangeBuffer;
+			
+			if(monster.mtype == "phoenix")
+			{
+				monsterRange = character.range - 15;
+			}
 			
 			var tangents = findTangents({x: character.real_x, y: character.real_y}, {x: monster.real_x, y: monster.real_y, radius: monsterRange});
 			
@@ -423,6 +450,11 @@ function getMonstersInRadius()
 			var distanceToEntity = distanceToPoint(entity.real_x, entity.real_y, character.real_x, character.real_y);
 			
 			var monsterRange = parent.G.monsters[entity.mtype].range;
+			
+			if(entity.mtype == "phoenix")
+			{
+				monsterRange = character.range - 15;
+			}
 
 			if(distanceToEntity < calcRadius)
 			{
