@@ -23,6 +23,8 @@ var farmMaps = ['cave', 'tunnel', 'main', 'halloween'];
 var currentMapIndex = 0;
 var currentSpawnIndex = 0;
 
+var goalTest;
+
 setInterval(function()
 {
 	use_hp_or_mp();
@@ -50,7 +52,7 @@ setInterval(function()
 	{
 		if(smart.moving)
 		{
-			stop();
+			//stop();
 		}
 		goal = {x: targetSpawn.center.x, y: targetSpawn.center.y}
 	}
@@ -63,25 +65,23 @@ setInterval(function()
 		
 		if(entity.mtype == "phoenix")
 		{
-			//goal = {x: entity.real_x, y: entity.real_y};
-			goal = {x: character.real_x+(entity.real_x-character.real_x)/10,
-					y: character.real_y+(entity.real_y-character.real_y)/10};
+			goal = {x: character.real_x+(entity.real_x-character.real_x),
+					y: character.real_y+(entity.real_y-character.real_y)};
 			found = true;
 			phoenix = entity;
 			break;
 		}
 	}
 	
-	//In the tunnel, avoid moles back to the door to speed things up.
-	if(character.map == "tunnel" && targetMap != "tunnel")
+	if(goal == null && smart.moving)
 	{
-		var distToDoor = distanceToPoint(character.real_x, character.real_y, -3, -32);
-		if(distToDoor > 50)
+		var currentPath = smart.plot[0];
+		
+		if(currentPath != null && currentPath.map == character.map)
 		{
-			goal = {x: -3, y: -32};
+			goal = smart.plot[0];
 		}
 	}
-	
 	
 	//Try to avoid monsters, 
 	var avoiding = avoidMobs(goal);
@@ -96,11 +96,6 @@ setInterval(function()
 				
 	if(!avoiding && goal != null)
 	{
-		if(smart.moving)
-		{
-			stop();
-		}
-		
 		if(lastMove == null || new Date() - lastMove > 100)
 		{
 			move(goal.x, goal.y);
@@ -544,4 +539,54 @@ function characterAngle() {
 
 function distanceToPoint(x1, y1, x2, y2) {
     return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+}
+
+//Modify Smart Move Logic to let the avoidance code manage the moving.
+smart_move_logic = function()
+{
+	if(!smart.moving) return;
+	if(!smart.searching && !smart.found)
+	{
+		start_pathfinding();
+	}
+	else if(!smart.found)
+	{
+		if(Math.random()<0.1)
+		{
+			move(character.real_x+Math.random()*0.0002-0.0001,character.real_y+Math.random()*0.0002-0.0001);
+			parent.d_text(shuffle(["Hmm","...","???","Definitely left","No right!","Is it?","I can do this!","I think ...","What If","Should be","I'm Sure","Nope","Wait a min!","Oh my"])[0],character,{color:shuffle(["#68B3D1","#D06F99","#6ED5A3","#D2CF5A"])[0]});
+		}
+		continue_pathfinding();
+	}
+	else if(can_walk(character) && !is_transporting(character))
+	{
+		if(!smart.plot.length)
+		{
+			smart.moving=false;
+			smart.on_done(true);
+			return;
+		}
+		var current=smart.plot[0];
+		
+		if(current.map == character.map)
+		{
+			
+			var distCurrent = parent.simple_distance({x: character.real_x, y: character.real_y}, {x: current.x, y: current.y});
+			
+			if(distCurrent < 50)
+			{
+				smart.plot.splice(0,1);
+			}
+		}
+		
+		if(current.town)
+		{
+			use("town");
+		}
+		else if(current.transport)
+		{
+			parent.socket.emit("transport",{to:current.map,s:current.s});
+			// use("transporter",current.map);
+		}
+	}
 }
