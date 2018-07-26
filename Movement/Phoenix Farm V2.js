@@ -25,6 +25,8 @@ var currentSpawnIndex = 0;
 
 var goalTest;
 
+var stuckTimer;
+
 setInterval(function()
 {
 	use_hp_or_mp();
@@ -65,8 +67,11 @@ setInterval(function()
 		
 		if(entity.mtype == "phoenix")
 		{
-			goal = {x: character.real_x+(entity.real_x-character.real_x),
+			if(can_move_to(entity.real_x, entity.real_y))
+			{
+				goal = {x: character.real_x+(entity.real_x-character.real_x),
 					y: character.real_y+(entity.real_y-character.real_y)};
+			}
 			found = true;
 			phoenix = entity;
 			break;
@@ -86,6 +91,25 @@ setInterval(function()
 	//Try to avoid monsters, 
 	var avoiding = avoidMobs(goal);
 	
+	if(goal != null && !can_move_to(goal.x, goal.y))
+	{
+		if(stuckTimer == null)
+		{
+			stuckTimer = new Date();
+		}
+		
+		if(new Date() - stuckTimer > 5000)
+		{
+			game_log("Getting unstuck...");
+			smart_move({x: goal.x, y: goal.y});
+			stuckTimer = null;
+		}
+	}
+	else
+	{
+		stuckTimer = null;
+	}
+	
 	if(!found && goal == null)
 	{
 		if(!smart.moving)
@@ -96,10 +120,20 @@ setInterval(function()
 				
 	if(!avoiding && goal != null)
 	{
-		if(lastMove == null || new Date() - lastMove > 100)
+		if(can_move_to(goal.x, goal.y))
 		{
-			move(goal.x, goal.y);
-			lastMove = new Date();
+			if(lastMove == null || new Date() - lastMove > 100)
+			{
+				move(goal.x, goal.y);
+				lastMove = new Date();
+			}
+		}
+		else
+		{
+			if(!smart.moving)
+			{
+				smart_move({x: goal.x, y: goal.y});
+			}
 		}
 	}
 	
