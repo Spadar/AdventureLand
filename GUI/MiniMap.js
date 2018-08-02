@@ -29,6 +29,7 @@ function on_draw()
 		if(parent.miniMap.length == 0)
 		{
 			e=new PIXI.Graphics();
+			e.zIndex = 999;
 			DrawMiniMap();
 			DrawWalls();
 			DrawEntities();
@@ -154,7 +155,6 @@ function DrawLine(point1, point2)
 	e.moveTo(point1.x + mapOrigin.x,point1.y + mapOrigin.y);
 	e.lineTo(point2.x + mapOrigin.x,point2.y + mapOrigin.y);
 	e.endFill();
-	e.zOrder = -99;
 }
 
 //Draws the background and outer rim of the mini map
@@ -167,7 +167,6 @@ function DrawMiniMap()
 	e.beginFill(0x40420);
 	e.drawCircle(mapOrigin.x, mapOrigin.y, miniMapRadius);
 	e.endFill();
-	e.zOrder = -99;
 }
 
 //Draws your character at the center of the mini map
@@ -179,7 +178,6 @@ function DrawCharacter()
 	e.beginFill(color);
 	e.drawCircle(mapOrigin.x, mapOrigin.y, 2);
 	e.endFill();
-	e.zOrder = -99;
 }
 
 //Draws all entities in parent.entities on the mini map
@@ -208,7 +206,6 @@ function DrawEntities()
 			e.beginFill(fill);
 			e.drawCircle(localPos.x + mapOrigin.x, localPos.y + mapOrigin.y, size);
 			e.endFill();
-			e.zOrder = -99;
 		}
 		
 	}
@@ -242,7 +239,6 @@ function DrawNPCs()
 				e.beginFill(color);
 				e.drawCircle(localPos.x + mapOrigin.x, localPos.y + mapOrigin.y, 2);
 				e.endFill();
-				e.zOrder = -99;
 			}
 		}
 		}
