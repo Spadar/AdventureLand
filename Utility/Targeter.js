@@ -1,5 +1,5 @@
 //Example Usage
-var targeter = new Targeter({goo: 2, mole: 1}, ["LootBot"], ["Landus"], {UseGreyList: true, RequireLOS: true, DebugPVP: false, TagTargets: true});
+var targeter = new Targeter({goo: 2, mole: 1}, ["Foaly"], ["Maela"], {UseGreyList: true, RequireLOS: true, DebugPVP: false, TagTargets: true});
 
 setInterval(function(){
 	var targets = targeter.GetPriorityTarget(3);
@@ -32,7 +32,7 @@ setInterval(function(){
 		Example:
 			["Foaly", "SpadarFaar"]
 	blacklist:
-		An array of player names which defines players that will always be attacked if in a PvP environment.
+		An array of player names which defines players that will always be targeted if in a PvP environment.
 		Example:
 			["Foaly", "SpadarFaar"]
 	args:
