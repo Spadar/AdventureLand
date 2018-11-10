@@ -87,7 +87,7 @@ function Targeter(priorityArgs, whitelist, blacklist, args)
 		{
 			let entity = parent.entities[id];
 			
-			if(this.IsPVP() && entity.type == "character" && !entity.npc)
+			if(this.IsPVP() && entity.type == "character" && !entity.npc && !entity.rip)
 			{
 				if(this.GreyList[entity.id] === undefined)
 				{
