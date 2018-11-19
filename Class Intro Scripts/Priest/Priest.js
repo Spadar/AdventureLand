@@ -174,9 +174,7 @@ function num_items(name)
 //Returns how many inventory slots have not yet been filled.
 function empty_slots()
 {
-	var empty = character.items.filter(item => item == null).length;
-	
-	return empty;
+	return character.esize;
 }
 
 //Gets an NPC by name from the current map.
