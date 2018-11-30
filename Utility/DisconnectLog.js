@@ -66,6 +66,7 @@ function disconnect_override() {
         parent.$("iframe").remove();
         
     } else {
-		parent.$("body").append("<div id='disconnectpanel' style='position: fixed; top: 0px; left: 0px; right: 0px; bottom: 0px; z-index: 999; background: rgba(0,0,0,0.85); text-align: center'><div onclick='refresh_page()' class='gamebutton clickable' style='margin-top: " + (parent.round(parent.height / 2) - 10) + "px'>" + a + "</div></div>")
+		parent.$("body").append("<div id='disconnectpanel' style='position: fixed; top: 0px; left: 0px; right: 0px; bottom: 0px; z-index: 999; background: rgba(0,0,0,0.85); text-align: center'><div onclick='refresh_page()' class='gamebutton clickable' style='margin-top: " + (parent.round(parent.height / 2) - 10) + "px'>" + a + "</div></div>");
+		parent.$("iframe").remove();
     }
 }
