@@ -601,13 +601,19 @@ smart_move_logic = function()
 			return;
 		}
 		var current=smart.plot[0];
+		var next = smart.plot[0];
+		if(smart.plot.length > 1)
+		{
+			next = smart.plot[1];
+		}
 		
 		if(current.map == character.map)
 		{
 			
 			var distCurrent = parent.simple_distance({x: character.real_x, y: character.real_y}, {x: current.x, y: current.y});
 			
-			if(distCurrent < 50)
+			var distNext = parent.simple_distance({x: character.real_x, y: character.real_y}, {x: next.x, y: next.y});
+			if(distCurrent < 1 || (next.map == character.map && can_move_to(next.x, next.y) && !next.transport && distNext < 100))
 			{
 				smart.plot.splice(0,1);
 			}
