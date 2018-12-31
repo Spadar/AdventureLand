@@ -11,7 +11,7 @@ var home_location = {x: -471, y: -692, map: "halloween"};
 //The following variables are assigned while the script is running. 
 
 //The map the event mob spawned on
-var events = [{name: "snowman", map: "halloween", x: -512, y: 515}];
+var events = [];
 
 //Holds the event mob entity if we find it.
 var target;
