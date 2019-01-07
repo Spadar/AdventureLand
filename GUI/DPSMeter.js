@@ -1,21 +1,18 @@
-//Original Base for GUI Layout From: https://github.com/JourneyOver/Adventure_Land_Codes/blob/master/Code%20Snippits/GUI%20Additions/Estimated%20Time%20Until%20Level%20Up%20GUI.js
-
-//Running window in milliseconds of how long to track hits for. Any hits outside of this window are removed.
 var dpsInterval = 10000;
+var damageSums = {};
 var damageLog = [];
 
 setInterval(function() {
-  updateMeter();
+  update_dpsmeter();
 }, 100);
-
-function init_dpsmeter(minref) {
+function init_dpsmeter() {
 
   let $ = parent.$;
   let brc = $('#bottomrightcorner');
 
   brc.find('#dpsmeter').remove();
 
-  let dpsmeter_container = $('<div id="dpsmeter"></div>').css({
+  let dps_container = $('<div id="dpsmeter"></div>').css({
     fontSize: '28px',
     color: 'white',
     textAlign: 'center',
@@ -26,24 +23,24 @@ function init_dpsmeter(minref) {
   });
 	
   //vertical centering in css is fun
-  let xptimer = $('<div id="dpsmetercontent"></div>')
+  let dpsmeter = $('<div id="dpsmetercontent"></div>')
     .css({
-      display: 'table-cell',
+      //display: 'table-cell',
       verticalAlign: 'middle'
     })
     .html("")
-    .appendTo(dpsmeter_container);
+    .appendTo(dps_container);
 
-  brc.children().first().after(dpsmeter_container);
+  brc.children().first().after(dps_container);
 }
 
 
 
-function updateMeter()
+function updateTimerList()
 {
 	let $ = parent.$;
 	
-	var listString = '<table border=5 bgcolor="black" align="right" cellpadding="5"><tr align="center"><td colspan="2">Damage Meter</td></tr><tr align="center"><td>Name</td><td>DPS</td></tr>';
+	var listString = '<table style="border-style: solid;" border="5px" bgcolor="black" align="right" cellpadding="5"><tr align="center"><td colspan="2">Damage Meter</td></tr><tr align="center"><td>Name</td><td>DPS</td></tr>';
 	
 	if(parent.party_list != null && character.party != null)
 	{
@@ -62,11 +59,16 @@ function updateMeter()
 	
 	if(parent.party_list != null && character.party != null)
 	{
-		var dps = getDPS();
-		listString = listString + '<tr align="left"><td align="center">' + "Total" + '</td><td>' + dps + '</td></tr>';
+		var dps = getTotalDPS();
+		listString = listString + '<tr align="left"><td>' + "Total" + '</td><td>' + dps + '</td></tr>';
 	}
 	
 	$('#' + "dpsmetercontent").html(listString);
+}
+
+
+function update_dpsmeter() {
+	updateTimerList();
 }
 
 
@@ -74,46 +76,41 @@ init_dpsmeter(5)
 
 function getDPS(partyMember)
 {
-	var sumDamage = 0;
-	var minTime;
-	var maxTime;
-	var entries = 0;
+	var entry = damageSums[partyMember];
+	var dps = 0;
 	
-	for(id in damageLog)
+	if(entry != null)
 	{
-		logEntry = damageLog[id];
-		if(new Date() - logEntry.time < dpsInterval)
+		var elapsed = new Date() - entry.startTime;
+
+		dps = parseFloat(Math.round((entry.sumDamage/(elapsed/1000)) * 100) / 100).toFixed(2);
+	}
+	return dps;
+}
+
+function getTotalDPS()
+{	
+	var minStart;
+	var sumDamage  = 0;
+	var dps = 0;
+	for(var id in damageSums)
+	{
+		var entry = damageSums[id];
+		
+		if(minStart == null || entry.startTime < minStart)
 		{
-			if(partyMember == null || logEntry.attacker == partyMember)
-			{
-					if(minTime == null || logEntry.time < minTime)
-					{
-						minTime = logEntry.time;
-					}
-				
-					if(maxTime == null || logEntry.time > maxTime)
-					{
-						maxTime = logEntry.time;
-					}
-				
-					sumDamage += logEntry.damage;
-				entries++;
-			}
+			minStart = entry.startTime;
 		}
-		else
-		{
-			damageLog.splice(id, 1);
-		}
+		
+		sumDamage += entry.sumDamage;
 	}
 	
-	if(entries <= 1)
+	if(minStart != null)
 	{
-		return 0;
+		var elapsed = new Date() - minStart;
+
+		dps = parseFloat(Math.round((sumDamage/(elapsed/1000)) * 100) / 100).toFixed(2);
 	}
-	
-	var elapsed = maxTime - minTime;
-	
-	var dps = parseFloat(Math.round((sumDamage/(elapsed/1000)) * 100) / 100).toFixed(2);
 	
 	return dps;
 }
@@ -143,6 +140,8 @@ function dpsmeterHitHandler(event)
 
 		var attackerEntity = parent.entities[attacker];
 		
+		
+		
 		if(attacker == character.name)
 		{
 			attackerEntity = character;
@@ -152,12 +151,20 @@ function dpsmeterHitHandler(event)
 		{
 			if(event.damage != null)
 			{
-				var hitEvent = {};
-				hitEvent.damage = event.damage;
-				hitEvent.time = new Date();
-				hitEvent.attacker = event.hid;
+				var attackerEntry = damageSums[attacker];
 				
-				damageLog.push(hitEvent);
+				if(attackerEntry == null)
+				{
+					var entry = {};
+					entry.startTime = new Date();
+					entry.sumDamage = 0;
+					damageSums[attacker] = entry;
+					attackerEntry = entry;
+				}
+				
+				attackerEntry.sumDamage += event.damage;
+				
+				damageSums[attacker] = attackerEntry;
 			}
 		}
 	}

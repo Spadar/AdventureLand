@@ -1,5 +1,5 @@
-var goldInterval = 1000*60*60;
-var goldLog = [];
+var startTime = new Date();
+var sumGold = 0;
 
 setInterval(function() {
   update_goldmeter();
@@ -33,13 +33,15 @@ function init_goldmeter() {
   brc.children().first().after(xpt_container);
 }
 
+
+
 function updateGoldTimerList()
 {
 	let $ = parent.$;
 	
 	var gold = getGold();
 	
-	var goldString = "<div>" + gold + " Gold/Hr" + "</div>" 
+	var goldString = "<div>" + gold + " Gold/Hr" + "</div>"; 
 	
 	$('#' + "goldtimercontent").html(goldString).css({
     background: 'black',
@@ -63,41 +65,7 @@ init_goldmeter()
 
 function getGold()
 {
-	var sumGold = 0;
-	var minTime;
-	var maxTime;
-	var entries = 0;
-	
-	for(id in goldLog)
-	{
-		logEntry = goldLog[id];
-		if(new Date() - logEntry.time < goldInterval)
-		{
-			if(minTime == null || logEntry.time < minTime)
-			{
-				minTime = logEntry.time;
-			}
-				
-			if(maxTime == null || logEntry.time > maxTime)
-			{
-				maxTime = logEntry.time;
-			}
-				
-			sumGold += logEntry.gold;
-			entries++;
-		}
-		else
-		{
-			goldLog.splice(id, 1);
-		}
-	}
-	
-	if(entries <= 1)
-	{
-		return 0;
-	}
-	
-	var elapsed = maxTime - minTime;
+	var elapsed = new Date() - startTime;
 	
 	var goldPerSecond = parseFloat(Math.round((sumGold/(elapsed/1000)) * 100) / 100);
 	
@@ -124,10 +92,7 @@ function goldMeterGameResponseHandler(event)
 {
 	if(event.response == "gold_received")
 	{
-		var goldEvent = {};
-		goldEvent.gold = event.gold;
-		goldEvent.time = new Date();
-		goldLog.push(goldEvent);
+		sumGold += event.gold;
 	}
 }
 
@@ -137,10 +102,7 @@ function goldMeterGameLogHandler(event)
 	{
 		var gold = parseInt(event.message.replace(" gold", "").replace(",", ""));
 		
-		var goldEvent = {};
-		goldEvent.gold = gold;
-		goldEvent.time = new Date();
-		goldLog.push(goldEvent);
+		sumGold += gold;
 	}
 }
 
