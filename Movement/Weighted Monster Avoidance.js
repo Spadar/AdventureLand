@@ -104,7 +104,7 @@ function avoidMobs(goal)
 	{
 		//Loop through the full 360 degrees (2PI Radians) around the character
 		//We'll test each point and see which way is the safest to  go
-		for(i = 0; i < Math.PI*2; i += Math.PI/360)
+		for(i = 0; i < Math.PI*2; i += Math.PI/60)
 		{
 			var weight = 0;
 
