@@ -1,4 +1,4 @@
-let ignore_list = ["Raphiel", "AriaHarper", "Firenus", "Boismon", "Daedulaus"];
+let ignore_list = [];
 
 let origPM = parent.socket._callbacks["$pm"][0];
 parent.socket.off("pm");
