@@ -307,7 +307,7 @@ function lowest_health_partymember() {
 	
     //Order our party array by health percentage
     party.sort(function (current, next) {
-        return current.entity.health_ratio - member.entity.health_ratio;
+        return current.entity.health_ratio - next.entity.health_ratio;
     });
 	
 
