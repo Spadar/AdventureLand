@@ -1,0 +1,103 @@
+let servers = {};
+
+parent.api_call("get_servers", {}, 
+		 {callback:setServers});
+
+function setServers(response)
+{
+	if(response != null && response[0] != null)
+	{
+		servers = {};
+		for(id in response[0].message)
+		{
+			var server = response[0].message[id];
+			
+			if(server.name != "TEST")
+			{
+				var serverObj = {};
+				serverObj.name = server.region + server.name;
+				serverObj.ip = server.ip;
+				serverObj.port = server.port;
+				serverObj.rewrite = "/in/" + server.region + "/" + server.name + "/";
+
+				servers[serverObj.name] = serverObj;
+			}
+		}
+	}
+	console.log(servers);
+	initializeListeners();
+}
+
+function initializeListeners()
+{
+	if(parent.server_listeners == null)
+	{
+		parent.server_listeners = [];
+	}
+	else
+	{
+		destroyListeners();
+	}
+	
+	for(id in servers)
+	{
+		var server = servers[id];
+
+		var listenerSocket = init_listener(server.ip, server.port, server.name)
+		
+		parent.server_listeners.push(listenerSocket);
+		
+		console.log(listenerSocket);
+	}
+}
+
+function init_listener(server_addr, server_port, server_name) {
+    let socket = parent.io.connect("wss://" + server_addr + ":" + server_port, { transports: ['websocket'] });
+    let original_onevent = socket.onevent;
+    let original_emit = socket.emit;
+    socket.emit = function(packet) {
+        original_emit.apply(socket, arguments);
+    };
+    socket.onevent = function(packet) {
+        original_onevent.apply(socket, arguments)
+    };
+	
+    socket.on("welcome", function(data) {
+		console.log(data);
+		socket.emit("loaded", {
+                success: 1,
+                width: parent.screen.width,
+                height: parent.screen.height,
+                scale: parent.scale
+            });
+    });
+    socket.on("entities", function(data) {
+		listenerEntities(data, server_name);
+    });
+	return socket;
+}
+
+function listenerEntities(data, server_name)
+{
+	//console.log("Processing Entity Info For " + server_name, data);
+}
+
+function destroyListener(id)
+{
+	let listener = parent.server_listeners[id];
+	listener.disconnect();
+	listener.destroy();
+	parent.server_listeners.splice(id, 1);
+}
+
+function destroyListeners()
+{
+	for(id in parent.server_listeners)
+	{
+		let listener = parent.server_listeners[id];
+		listener.disconnect();
+		listener.destroy();
+	}
+	
+	parent.server_listeners = [];
+}
