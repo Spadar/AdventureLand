@@ -1,0 +1,918 @@
+//LIMITATIONS
+//Each server only allows 5 concurrent connections to it from the same IP
+//These connections are consumed by any characters on that server, as well as this CODE
+//Therefore, this code must run on a solo mage, alone on their own server.
+
+let farmLocation = {x: 0, y: 0, map: "main"};
+let autoRespawn = false;
+
+destroyListeners();
+setInterval(function(){
+	clear_drawings();
+	if(lastPhoenixSeen != null)
+	{
+		set_message(new Date() - lastPhoenixSeen);
+	}
+	
+	if(character.rip && autoRespawn)
+	{
+		respawn();
+	}
+	
+	use_hp_or_mp();
+	loot();
+	
+	if(parent.remote_listeners == null || parent.remote_listeners.length < phoenixSpawns.length)
+	{
+		if(!isWatcherLoading())
+		{
+			createPhoenixSpawnWatchers();
+		}
+	}
+	else
+	{
+		let searchEntity = findEntity("monster", "phoenix");
+
+		if(searchEntity || (lastPhoenixSeen != null && new Date() - lastPhoenixSeen > 35000))
+		{
+			if(searchEntity != null)
+			{
+				//Phoenix has spawned, go kill it!
+				huntPhoenix(searchEntity);
+			}
+			else
+			{
+				//Phoenix should have spawned but isn't visible..
+				//Check blind spots
+				let problemSpawn = problemSpawns[activeIndex];
+				
+				if(character.map != problemSpawn.map || simple_distance(problemSpawn, character) > 25)
+				{
+					blinkToSpot(problemSpawn.x, problemSpawn.y, problemSpawn.map);
+				}
+				else
+				{
+					activeIndex++;
+					if(activeIndex > problemSpawns.length - 1)
+					{
+						activeIndex = 0;
+					}
+				}
+			}
+		}
+		else
+		{
+			//Do something else to fill your time!
+			//farmBetweenPhoenixes();
+		}
+	}
+	
+	for(let id in parent.remote_listeners)
+	{
+		let listener = parent.remote_listeners[id];
+		
+		if(listener.map == character.map)
+		{
+			draw_circle(listener.x, listener.y, 25);
+		}
+	}
+}, 100);
+
+//Begin Spaghetti Code
+let mapTeleports = {};
+let excludeMaps = [];
+
+populateMapTeleports();
+let lastPhoenixSeen = null;
+let phoenixSpawns = [];
+let problemSpawns = [];
+phoenixSpawns = getPhoenixSpawns();
+console.log(phoenixSpawns);
+
+let activeIndex = 0;
+
+function getPhoenixSpawns(){
+	let spawns = [];
+	problemSpawns = [];
+	
+	let boundaries = G.maps.main.monsters[26].boundaries;
+	
+	for(let id in boundaries)
+	{
+		let boundary = boundaries[id];
+		
+		//split the beach into two spawns to have better visibility
+		//NOTE: Server only allows 5 connections, not currently viable...
+		let center = boxCenter(boundary[1], boundary[2], boundary[3], boundary[4]);
+		let maxDist = 2001;
+		let spawnLength = Math.abs(boundary[3] - boundary[4]);
+		if(spawnLength > maxDist)
+		{
+			let spacing = spawnLength/4;
+
+			problemSpawns.push({x: center.x, y: center.y + spacing, map: boundary[0]});
+			problemSpawns.push({x: center.x, y: center.y - spacing, map: boundary[0]});
+		}
+			spawns.push({x: center.x, y: center.y, map: boundary[0]});
+	}
+	
+	return spawns;
+}
+
+function farmBetweenPhoenixes(){
+	if(character.map != farmLocation.map || simple_distance(farmLocation, character) > 500)
+	{
+		blinkToSpot(farmLocation.x, farmLocation.y, farmLocation.map);
+	}
+	else
+	{
+		//Implement farming logic here.
+	}
+}
+
+function huntPhoenix(searchEntity){
+	let target = searchEntity.Entity;
+	if(target.map == character.map)
+	{
+		let entity = parent.entities[target.id];
+		
+		if(entity == null)
+		{
+			let distToSpotted = simple_distance(target, character);
+			
+			if(distToSpotted < 10)
+			{
+				if(searchEntity.Listener != null)
+				{
+					if(searchEntity.Listener.entities[target.id] != null)
+					{
+						delete searchEntity.Listener.entities[target.id];
+					}
+				}
+			}
+			else
+			{
+				blinkToSpot(target.x, target.y, target.map);
+			}
+		}
+		else
+		{
+			lastPhoenixSeen = new Date();
+			if(can_move_to(entity.x, entity.y))
+			{
+				move(entity.x, entity.y);
+				
+				if(can_attack(entity))
+				{
+					attack(entity);
+				}
+			}
+			else
+			{		
+				if(!smart.moving)
+				{
+					smart_move({x: entity.x, y: entity.y, map: entity.map});
+				}
+			}
+		}
+	}
+	else
+	{
+		blinkToSpot(target.x, target.y, target.map);
+	}
+}
+
+function blinkToSpot(x, y, map){
+	if(character.map != map)
+	{
+		let path = getTeleportPath({x: character.x, y: character.y, map: character.map}, map);
+		
+		if(path != null)
+		{
+			let nextTP = findNearestTeleportToMap(path[0].to);
+			
+			let distToTP = simple_distance(character, nextTP);
+			
+			if(distToTP < 30)
+			{
+				transport(path[0].to, nextTP.s);
+			}
+			else
+			{
+				tryBlink(nextTP.x, nextTP.y);
+			}
+		}
+	}
+	else
+	{
+		tryBlink(x,y);
+	}
+}
+
+let lastBlink = 0;
+function tryBlink(x,y){
+	if(new Date() - lastBlink > G.skills.blink.cooldown + 100)
+	{
+		
+		use_skill("blink", [x,y]);
+		lastBlink = new Date();
+	}
+}
+
+function createPhoenixSpawnWatchers(){
+	if(servers != null)
+	{		
+		let index = getMissingWatchers()[0];
+		
+		let activeSpawn = phoenixSpawns[index];
+
+		if(!smart.moving)
+		{
+			if(simple_distance(activeSpawn, character) > 25)
+			{
+				blinkToSpot(activeSpawn.x, activeSpawn.y, activeSpawn.map);
+				//smart_move({map: activeSpawn[0], x: center.x, y: center.y});
+			}
+			else
+			{
+				if(!doesListenerExist(index))
+				{
+					let listenerSocket = initListenerByName(getActiveServer(), character.id, index, {x: activeSpawn.x, y: activeSpawn.y, map: activeSpawn.map});
+				}
+			}
+		}
+	}
+	else
+	{
+		set_message("Loading Servers");
+	}
+}
+
+function isWatcherLoading(){
+	for(let id in parent.remote_listeners)
+	{
+		let listener = parent.remote_listeners[id];
+		if(listener.Loaded == false)
+		{
+			return true;
+		}
+	}
+}
+
+function getMissingWatchers()
+{
+	let spawnIds = [];
+	
+	for(let id in phoenixSpawns)
+	{
+		spawnIds.push(id);
+	}
+	
+	let ids = [];
+	for(let id in parent.remote_listeners)
+	{
+		let listener = parent.remote_listeners[id];
+		
+		ids.push(listener.Identifier);
+		
+	}
+		
+	return spawnIds.filter(x => !ids.includes(x));
+}
+
+let servers = null;
+parent.api_call("get_servers", {}, 
+		 {callback:setServers});
+
+function setServers(response)
+{
+	if(response != null && response[0] != null)
+	{
+		servers = {};
+		for(id in response[0].message)
+		{
+			let server = response[0].message[id];
+			
+			if(server.name != "TEST")
+			{
+				let serverObj = {};
+				serverObj.name = server.region + server.name;
+				serverObj.ip = server.ip;
+				serverObj.port = server.port;
+				serverObj.rewrite = "/in/" + server.region + "/" + server.name + "/";
+
+				servers[serverObj.name] = serverObj;
+			}
+		}
+	}
+}
+
+function boxCenter(x1, y1, x2, y2){
+	return {x: (x1 + x2) / 2, y: (y1 + y2) / 2};
+}
+
+function findEntity(type, search)
+{
+	//Check all listeners for search
+	if(type == "character")
+	{
+		for(let id in parent.remote_listeners)
+		{
+			let listener = parent.remote_listeners[id];
+			if(listener.entities != null)
+			{
+				let targetPlayer = listener.entities[search];
+				
+				if(targetPlayer != null)
+				{
+					return {Listener: listener, Entity: targetPlayer};
+				}
+			}
+		}
+	}
+	else if(type == "monster")
+	{
+		for(let id in parent.remote_listeners)
+		{
+			let listener = parent.remote_listeners[id];
+			if(listener.entities != null)
+			{
+				for(let id in listener.entities)
+				{
+					let entity = listener.entities[id];
+					if(entity.mtype == search)
+					{
+						return {Listener: listener, Entity: entity};
+					}
+				}
+			}
+		}
+	}
+	
+	//Not found via listener, check local entities
+	for(let id in parent.entities)
+	{
+		let entity = parent.entities[id];
+		
+		if(entity.type == search || entity.mtype == search)
+		{
+			return {Listener: null, Entity: entity};
+		}
+	}
+}
+
+function getActiveServer()
+{
+	return parent.server_region + parent.server_identifier;
+}
+
+function doesListenerExist(identifier)
+{
+	if(parent.remote_listeners)
+	{
+		for(let id in parent.remote_listeners)
+		{
+			let listener = parent.remote_listeners[id];
+
+			if(listener.Identifier == identifier)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+function getCharacterSecret(name){
+	for(let id in parent.X.characters)
+	{
+		let character = parent.X.characters[id];
+		
+		if(character.name == name)
+		{
+			return character.secret;
+		}
+	}
+	
+	return null;
+}
+
+function initListenerByName(serverID, observeCharacter, identifier) {
+	let server = servers[serverID];
+	
+	return initListener(server.ip, server.port, server.name, observeCharacter, identifier);
+}
+
+function initListener(server_addr, server_port, server_name, observeCharacter, identifier, position) {
+	
+	let listenerObj = {};
+	listenerObj.Loaded = false;
+	listenerObj.IntendedPosition = position;
+	loadingWatcher = true;
+	
+	let url = "wss://" + server_addr + ":" + server_port;
+	let query = ""
+	if(observeCharacter != null)
+	{
+		let secret = getCharacterSecret(observeCharacter);
+		
+		
+		if(secret != null)
+		{
+			query = "desktop=" + "" + "&secret=" + secret
+		}
+	}
+	
+    let socket = parent.io.connect(url, { transports: ['websocket'], query: query });
+    let original_onevent = socket.onevent;
+    let original_emit = socket.emit;
+    socket.emit = function(packet) {
+        original_emit.apply(socket, arguments);
+    };
+    socket.onevent = function(packet) {
+        original_onevent.apply(socket, arguments)
+    };
+	
+    socket.on("welcome", function(data) {
+		listenerObj.ActualPosition = {x: data.x, y: data.y, map: data.map};
+		
+		socket.emit("loaded", {
+				success: 1,
+				width: parent.screen.width,
+				height: parent.screen.height,
+				scale: parent.scale
+			});
+		if(listenerObj.IntendedPosition.x != listenerObj.ActualPosition.x
+			|| listenerObj.IntendedPosition.y != listenerObj.ActualPosition.y
+			|| listenerObj.IntendedPosition.map != listenerObj.ActualPosition.map)
+		{
+			game_log("Watcher was created at an unintended Position, recreating...");
+			destroyListenerByIdentifier(listenerObj.Identifier)
+		}
+    });
+	
+	socket.on("start", function(data){
+		console.log(data);
+	});
+	
+    socket.on("entities", function(data) {
+		listenerObj.Loaded = true;
+		listenerEntities(data, server_name, listenerObj);
+    });
+	socket.on("disappear", function(data){
+		listenerDisappear(data, server_name, listenerObj);
+	});
+	socket.on("death", function(data){
+		listenerDisappear(data, server_name, listenerObj);
+	});
+	socket.on("notthere", function(data){
+		listenerDisappear(data, server_name, listenerObj);
+	});
+	socket.on("disconnect_reason", function(data){
+		game_log("Watcher was disconnected... Too many connections on one server?");
+		destroyListenerByIdentifier(listenerObj.Identifier);
+	});
+	
+	listenerObj.socket = socket;
+	
+	listenerObj.Identifier = identifier;
+	
+	if(parent.remote_listeners == null)
+	{
+		parent.remote_listeners = [];
+	}
+	
+	parent.remote_listeners.push(listenerObj);
+	
+	return listenerObj
+}
+
+function listenerEntities(data, server_name, listener)
+{
+	if(listener.entities == null)
+	{
+		listener.entities = {};
+	}
+	
+	for(let id in data.players)
+	{
+		let player = data.players[id];
+		
+		let entity = {};
+		
+		let previousEntity = listener.entities[player.id];
+		
+		entity = updateEntity(previousEntity, player, data.map, "character");
+		
+		listener.entities[player.id] = entity;
+	}
+	
+	for(let id in data.monsters)
+	{
+		let monster = data.monsters[id];
+		
+		let entity = {};
+		
+		let previousEntity = listener.entities[monster.id];
+		
+		entity = updateEntity(previousEntity, monster, data.map, "monster");
+		
+		if(listener.entities[monster.id] == null)
+		{
+			if(monster.type == "phoenix")
+			{
+				game_log("Phoenix Spawned!");
+			}
+		}
+		
+		listener.entities[monster.id] = entity;
+	}
+}
+
+function removeAbandonedEntities(listener)
+{
+	
+	for(let id in listener.entities)
+	{
+		let entity = listener.entities[id];
+		
+		//If an entity hasn't been updated in more than 10 seconds, delete it.
+		if(new Date() - entity.lastUpdated > 30000)
+		{
+			console.log(entity, listener);
+			delete listener.entities[entity.id];
+		}
+	}
+}
+
+function updateEntity(oldEntity, newEntity, map, type)
+{
+	if(oldEntity == null)
+	{
+		oldEntity = {};
+	}
+	
+	let entity = {};
+	if(newEntity.id != null)
+	{
+		entity.id = newEntity.id;
+	}
+	else
+	{
+		entity.id = oldEntity.id;
+	}
+	
+	if(newEntity.hp != null)
+	{
+		entity.hp = newEntity.hp;
+	}
+	else
+	{
+		entity.hp = oldEntity.hp;
+	}
+	
+	if(newEntity.max_hp != null)
+	{
+		entity.max_hp = newEntity.max_hp;
+	}
+	else
+	{
+		entity.max_hp = oldEntity.max_hp;
+	}
+	
+	if(newEntity.mp != null)
+	{
+		entity.mp = newEntity.mp;
+	}
+	else
+	{
+		entity.mp = oldEntity.mp;
+	}
+	
+	if(newEntity.x != null)
+	{
+		entity.x = newEntity.x;
+	}
+	else
+	{
+		entity.x = oldEntity.x;
+	}
+	
+	if(newEntity.y != null)
+	{
+		entity.y = newEntity.y;
+	}
+	else
+	{
+		entity.y = oldEntity.y;
+	}
+	
+	if(newEntity.rip != null)
+	{
+		entity.rip = newEntity.rip;
+	}
+	else
+	{
+		entity.rip = oldEntity.rip;
+	}
+	
+	if(newEntity.dead != null)
+	{
+		entity.dead = newEntity.dead;
+	}
+	else
+	{
+		entity.dead = oldEntity.dead;
+	}
+	
+	entity.type = type;
+	
+	if(type == "monster"){
+		if(newEntity.type != null)
+		{
+			entity.mtype = newEntity.type;
+		}
+		else
+		{
+			entity.mtype = oldEntity.mtype;
+		}
+	}
+	
+	entity.lastUpdated = new Date();
+	
+	entity.map = map;
+	
+	//Keep track of updates to the phoenix for debug purposes
+	// if(entity.mtype == "phoenix")
+	// {
+		// if(oldEntity.updates == null)
+		// {
+			// entity.updates = [];
+		// }
+		// else
+		// {
+			// entity.updates = oldEntity.updates;
+		// }
+
+		// entity.updates.push(newEntity);
+	// }
+	
+	return entity;
+}
+
+function listenerDisappear(data, server_name, listener)
+{
+	if(listener.entities && listener.entities[data.id]){
+		delete listener.entities[data.id];	
+	}
+}
+
+function destroyListenerByIdentifier(identifier)
+{
+	for(let id in parent.remote_listeners)
+	{
+		let listener = parent.remote_listeners[id];
+		if(listener.Identifier == identifier)
+		{
+			listener.socket.disconnect();
+			listener.socket.destroy();
+			parent.remote_listeners.splice(id, 1);
+		}
+	}
+}
+
+function destroyListener(id)
+{
+	let listener = parent.remote_listeners[id];
+	listener.socket.disconnect();
+	listener.socket.destroy();
+	parent.remote_listeners.splice(id, 1);
+}
+
+function destroyListeners()
+{
+	for(let id in parent.remote_listeners)
+	{
+		let listener = parent.remote_listeners[id];
+		console.log(listener);
+		listener.socket.disconnect();
+		listener.socket.destroy();
+	}
+	
+	parent.remote_listeners = [];
+}
+
+function populateMapTeleports()
+{
+	
+    for(var mapName in parent.G.maps)
+    {
+		if(excludeMaps.indexOf(mapName) == -1)
+		{
+			var teleports = {map: mapName, teleports: []};
+			var map = parent.G.maps[mapName];
+
+			for(var doorName in map.doors)
+			{
+				var door = map.doors[doorName];
+				if(teleports.teleports.filter(tp => tp.to == door[4]) == 0 && mapName != door[4])
+				{
+					if(excludeMaps.indexOf(door[4]) == -1)
+					{
+						teleports.teleports.push({to: door[4]});
+					}
+				}
+
+			}
+
+			var transporter = map.npcs.filter(npc => npc.id == "transporter");
+
+			if(transporter.length > 0)
+			{
+				var places = Object.keys(parent.G.npcs.transporter.places);
+				for(let id in places)
+				{
+					var placeMap = places[id];
+					if(excludeMaps.indexOf(placeMap) == -1)
+					{
+						if(teleports.teleports.filter(tp => tp.to == placeMap) == 0 && mapName != placeMap)
+						{
+							teleports.teleports.push({to: placeMap});
+						}
+					}
+				}
+			}
+			mapTeleports[mapName] = teleports;
+		}
+    }
+}
+
+function getTeleportPath(startPos, endMap)
+{
+    var openList = [];
+	
+    var closedList = [];
+	
+    var activeNode = mapTeleports[startPos.map];
+	
+    var loopLimit = 1000;
+    var counter = 0;
+	
+    while(activeNode.map != endMap && counter < loopLimit)
+    {
+        for(let map in activeNode.teleports)
+        {
+            var teleport = activeNode.teleports[map];
+			
+            teleport.from = activeNode.map;
+			
+            if(!closedList.includes(teleport.to))
+            {
+                openList.push(teleport);
+				
+                if(teleport.to == endMap)
+                {
+                    return reduceOpenList(openList);
+                }
+            }
+        }
+		
+        closedList.push(activeNode.map);
+        var availableMaps = openList.filter(tp => !closedList.includes(tp.to));
+        if(availableMaps.length > 0)
+        {
+            activeNode = mapTeleports[availableMaps[0].to];
+        }
+        else
+        {
+            return null;
+        }
+        counter++;
+    }
+	
+	console.log("Pathfinding exceeded loop limit");
+}
+
+function reduceOpenList(openList)
+{
+    var reducedList = [];
+	
+    var activeNode = openList[openList.length - 1];
+	
+    var loopLimit = 1000;
+    var counter = 0;
+	
+    while(activeNode != null && counter < loopLimit)
+    {
+        reducedList.push(activeNode);
+		
+        var previousNode = openList.filter(n => n.to == activeNode.from && n.to != n.from);
+		
+        if(previousNode.length > 0)
+        {
+            activeNode = previousNode[0];
+        }
+        else
+        {
+            activeNode = null;
+        }
+        counter++;
+    }
+	
+    if(counter >= loopLimit)
+    {
+        console.log("Pathfinding exceeded loop limit");
+    }
+	
+    return reducedList.reverse();
+}
+
+function findNearestTeleportToMap(mapName)
+{
+    var teleportLocation = {};
+    var teleportDistance;
+    var map = parent.G.maps[character.map];
+		
+    for(let doorName in map.doors)
+    {
+        var door = map.doors[doorName];
+        if(door[4] == mapName)
+        {
+            var doorDist = simple_distance(character, {x:door[0], y:door[1]});
+            if(teleportDistance == null || doorDist < teleportDistance)
+            {
+				var spawn = map.spawns[door[6]];
+				
+                teleportLocation = {x: spawn[0], y: spawn[1], s: door[5]};
+				
+				
+				teleportDistance = doorDist;
+            }
+        }
+    }
+		
+    var transporter = map.npcs.filter(npc => npc.id == "transporter");
+		
+    if(transporter.length > 0)
+    {
+        var npc = transporter[0];
+        var places = Object.keys(parent.G.npcs.transporter.places);
+		
+		var spawnDistance = null;
+		var useTransporter = false;
+		
+		for(let id in places)
+		{
+			var placeMap = places[id];
+			if(placeMap == mapName)
+			{
+				var doorDist = simple_distance(character, {x:npc.position[0], y:npc.position[1]});
+				if(teleportDistance == null || doorDist < teleportDistance)
+				{
+					let closestSpawn = findClosestSpawnToNPC("transporter", character.map);
+
+					teleportLocation = {x: closestSpawn.x, y: closestSpawn.y, s: parent.G.npcs.transporter.places[placeMap]};
+					
+				}
+			}
+		}
+    }
+	
+    return teleportLocation;
+}
+
+function findNPC(name, map)
+{
+	for(let id in G.maps[map].npcs)
+	{
+		let npc = G.maps[map].npcs[id];
+		
+		if(npc.id == name)
+		{
+			return npc;
+		}
+	}
+}
+
+function findClosestSpawnToNPC(name, map)
+{
+	let npc = findNPC(name, map);
+	
+	let closestSpawn = null;
+	let closestDist = null;
+	
+	for(let id in G.maps[map].spawns)
+	{
+		let spawn = G.maps[map].spawns[id];
+		
+		let dist = simple_distance({x: npc.position[0], y: npc.position[1]}, {x: spawn[0], y: spawn[1]});
+		
+		if(closestDist == null || dist < closestDist)
+		{
+			closestDist = dist;
+			closestSpawn = {x: spawn[0], y: spawn[1], s: id};
+		}
+	}
+	
+	return closestSpawn;
+}
