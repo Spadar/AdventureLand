@@ -71,15 +71,75 @@ function init_listener(server_addr, server_port, server_name) {
                 scale: parent.scale
             });
     });
-    socket.on("entities", function(data) {
-		listenerEntities(data, server_name);
+	
+	if(server_name == parent.server_region + parent.server_identifier)
+	{
+		console.log("initializing startup events");
+		listenerServerInfo(parent.S, server_name);
+	}
+	socket.on("server_info", function(data) {
+		listenerServerInfo(data, server_name);
     });
+	
 	return socket;
 }
 
-function listenerEntities(data, server_name)
+function listenerServerInfo(data, server_name)
 {
-	//console.log("Processing Entity Info For " + server_name, data);
+	console.log("Processing Server Info For " + server_name);
+	let savedListServer = parent.window.localStorage.getItem("event_log_" + server_name);
+	if(savedListServer == null)
+	{
+		savedListServer = {};
+	}
+	else
+	{
+		savedListServer = JSON.parse(savedListServer);
+	}
+	
+	
+	for(let id in data)
+	{
+		let event = data[id];
+		event.name = id;
+		let savedEvent = savedListServer[event.name];
+		
+		if(event.live === false)
+		{
+			console.log("Deleting Event For " + server_name, event);
+			delete savedListServer[id];
+		}
+		else
+		{
+			savedListServer[id] = event;
+		}
+
+		console.log("Saving Event For " + server_name, savedListServer);
+		parent.window.localStorage.setItem("event_log_" + server_name, 	JSON.stringify(savedListServer));
+
+		console.log(server_name, event);
+	}
+}
+
+function listenerGameEvent(event, server_name)
+{
+	var savedListServer = parent.window.localStorage.getItem("event_log_" + server_name);
+	if(savedListServer == null)
+	{
+		savedListServer = {};
+	}
+	else
+	{
+		savedListServer = JSON.parse(savedListServer);
+	}
+	
+	savedListServer[event.name] = event;
+	
+	console.log("Saving Game Event For " + server_name);
+	
+	parent.window.localStorage.setItem("event_log_" + server_name, 	JSON.stringify(savedListServer));
+	
+	console.log(server_name, event);
 }
 
 function destroyListener(id)
